@@ -9,7 +9,7 @@ const axios = require("axios");
 const path = require('path');
 
 
-const token = '6663574410:AAFAC7Xj0JypUpa7pi60drZAxtNhW5uD3QI'
+const token = '7084691138:AAH1EVdLpqe1ThHaOcWejITo5q_8yhWk0RA'
 const id = '7165556607'
 const address = 'https://www.google.com'
 
